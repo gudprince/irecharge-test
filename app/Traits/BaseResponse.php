@@ -15,7 +15,7 @@ trait BaseResponse
     public function sendResponse($result, $message, $code=200)
     {
     	$response = [
-            'success' => true,
+            'status' => 'success',
             'message' => $message,
             'data'    => $result,
             
@@ -32,7 +32,7 @@ trait BaseResponse
     public function sendError($error, $errorMessages = [], $code)
     {
     	$response = [
-            'success' => false,
+            'status' => 'false',
             'message' => $error,
         ];
 

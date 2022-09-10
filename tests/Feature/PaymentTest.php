@@ -9,7 +9,7 @@ use App\Models\Customer;
 class PaymentTest extends TestCase
 {   
     use RefreshDatabase;
-    
+
     /**
      * Charge a Customer Card.
      *
@@ -39,7 +39,9 @@ class PaymentTest extends TestCase
                 "pin" => "3310"
             ]
         ];
+
         $response = $this->json('POST', url('api/v1/charge-card'), $data);
+       
         $response->assertStatus(200);
         $this->assertArrayHasKey('data', $response);
         $this->assertEquals($response['status'],"success");

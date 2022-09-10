@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 
@@ -28,7 +27,7 @@ class CustomerTest extends TestCase
         $response = $this->json('POST',url('api/v1/customers'), $customerData);
         $response->assertStatus(201);
         $this->assertArrayHasKey('data',$response);
-        $this->assertEquals($response['success'],true);
+        $this->assertEquals($response['status'],'success');
 
        
     }
