@@ -1,10 +1,10 @@
-Requirements
+## Requirements
 
 * PHP ^8.0.2
 
 * Check Laravel 9 Requirements https://laravel.com/docs/9.x
 
-Installation
+## Installation
 
 * Install dependencies (composer install)
 
@@ -14,6 +14,6 @@ Installation
 
 * Database seed (php artisan db:seed)
 
-Documentaion Link
+## Documentaion Link
 
 https://documenter.getpostman.com/view/22023924/VVkH5tM2
