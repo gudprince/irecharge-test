@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use App\Traits\BaseResponse;
 
-class StoreCustomerRequest extends FormRequest
+class ValidateOtpRequest extends FormRequest
 {
     use BaseResponse;
     /**
@@ -30,9 +30,8 @@ class StoreCustomerRequest extends FormRequest
     public function rules()
     {
         return [
-            'name'  => 'required|string',
-            'email'  => 'required|email|max:255|unique:users',
-            'password'  => 'required',
+            'flw_ref'  => 'required|string',
+            'otp'  => 'required',
         ];
     }
 

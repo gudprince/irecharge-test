@@ -20,10 +20,10 @@ class PaymentTest extends TestCase
         $customer = Customer::factory()->create();
 
         $data = [
-            "card_number" => "5531886652142950",
-            "cvv" => "564",
-            "expiry_month" => "09",
-            "expiry_year" => "32",
+            "card_number" => "5061460410120223210",
+            "cvv" => "780",
+            "expiry_month" => "12",
+            "expiry_year" => "31",
             "currency" => "NGN",
             "amount" => "200",
             "email" => $customer->email,
@@ -34,13 +34,25 @@ class PaymentTest extends TestCase
                 "customer_id" => $customer->id,
                 "product_id" => 3
             ],
-            "authorization" => [
-                "mode" => "pin",
-                "pin" => "3310"
-            ]
+        ];
+        //check the authorization mode and add the pin
+        $response = $this->json('POST', url('api/v1/charge-card'), $data);
+
+        $data['authorization'] = [
+            "mode" => "pin",
+            "pin" => "3310"
         ];
 
-        $response = $this->json('POST', url('api/v1/charge-card'), $data);
+        $response = $this->json('POST', url('api/v1/authorize-payment'), $data);
+
+        //verify the otp
+        $params = [
+                "flw_ref"=> $response['data']['flw_ref'],
+                 "otp" => "12345"
+        ];
+
+         //verify the payment
+        $response = $this->json('POST', url('api/v1/validate-otp'), $params);
        
         $response->assertStatus(200);
         $this->assertArrayHasKey('data', $response);

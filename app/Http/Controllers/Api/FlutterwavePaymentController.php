@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Traits\BaseResponse;
 use App\Http\Requests\PaymentRequest;
+use App\Http\Requests\ValidateOtpRequest;
 use Illuminate\Http\Request;
 use App\Services\PaymentService;
 use App\Http\Controllers\Controller;
@@ -26,7 +27,30 @@ class FlutterwavePaymentController extends Controller
      */
     public function pay(PaymentRequest $request)
     {
-        $data = $this->paymentService->handlePayment($request->all());
+        $data = $this->paymentService->pay($request->all());
+
+        return response()->json($data, 200);
+    }
+
+     /**
+     * @param Request $request
+     * @return array
+     */
+    public function authorizePayment(Request $request)
+    {
+        $data = $this->paymentService->authorizePayment($request->all());
+
+        return response()->json($data, 200);
+    }
+
+     /**
+     * @param Request $request
+     * @throws \Illuminate\Validation\HttpResponseException
+     * @return array
+     */
+    public function validateOtp(ValidateOtpRequest $request)
+    {
+        $data = $this->paymentService->validateOtp($request->all());
 
         return response()->json($data, 200);
     }

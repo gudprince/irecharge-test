@@ -15,50 +15,46 @@ class PaymentService
      * Process the card payment
      * @return array
      */
-    public function handlePayment($payload)
+    public function pay($payload)
     {
         try {
 
-            $result = $this->chargeCard($payload);
+            $params = [
+                'reference' => $payload['tx_ref'],
+                'amount'  => $payload['amount'],
+                'product_id'  => $payload['meta']['product_id'],
+                'customer_id'  => $payload['meta']['customer_id'],
+                'payment_method' => "CARD",
+                'currency' => $payload['currency'],
+                'customer_email' =>  $payload['email'],
+            ];
 
-            if ($result['status'] == "error") {
+            $response = $this->chargeCard($payload);
 
-                return $result;
-            }
+            switch ($response['meta']['authorization']['mode'] ?? null) {
+                case 'pin':
+                case 'avs_noauth':
 
-            $mode = $result['meta']['authorization']['mode'];
+                    // Store the payment details
+                    Payment::create($params);
 
-            //create the payment record in database 
-            if ($mode == 'otp' || $mode == 'redirect') {
-                $params = [
-                    'reference' => $payload['tx_ref'],
-                    'amount'  => $result['data']['amount'],
-                    'transaction_id' => $result['data']['id'],
-                    'product_id'  => $payload['meta']['product_id'],
-                    'customer_id'  => $payload['meta']['customer_id'],
-                    'payment_method' => "CARD",
-                    'currency' => $payload['currency'],
-                    'customer_email' =>  $payload['email'],
-                ];
+                    return $response;
 
-                Payment::create($params);
-            }
+                case 'redirect':
 
-            //return authentication mode
-            if ($mode == 'pin' || $mode == 'avs_noauth') {
+                    // Store the payment details
 
-                return $result;
-            }
+                    Payment::create($payload);
 
-            if ($mode == 'otp') {
-                $response = $this->validateOpt($result);
+                    return $response;
+                default:
 
-                return $response;
-            }
+                    // No authorization needed; just verify the payment
+                    $transactionId = $response['data']['id'];
+                    $paymentStatus = $response['data']['status'];
+                    $transaction = $this->verifyPayment($transactionId, $paymentStatus);
 
-            if ($mode == 'redirect') {
-
-                return  $result;
+                    return $transaction;
             }
         } catch (\Exception $e) {
             throw new HttpResponseException(
@@ -66,6 +62,35 @@ class PaymentService
             );
         }
     }
+
+    /**
+     * Authorize the payment
+     * @return array
+     */
+
+    public function authorizePayment($payload)
+    {
+
+        $response = $this->chargeCard($payload);
+
+        if ($response['status'] == 'error') {
+            return $response;
+        }
+
+        switch ($response['meta']['authorization']['mode'] ?? null) {
+            case 'otp':
+                return $response;
+            case 'redirect':
+                return $response;
+            default:
+                // No validation needed; just verify the payment
+                $transactionId = $response['data']['id'];
+                $paymentStatus = $response['data']['status'];
+                $transaction = $this->verifyPayment($transactionId, $paymentStatus);
+                return $transaction;
+        }
+    }
+
 
     /**
      * Obtain Flutterwave information
@@ -90,7 +115,6 @@ class PaymentService
     protected function encrypt(string $encryptionKey, array $payload)
     {
         $encrypted = openssl_encrypt(json_encode($payload), 'DES-EDE3', $encryptionKey, OPENSSL_RAW_DATA);
-
         return base64_encode($encrypted);
     }
 
@@ -99,7 +123,7 @@ class PaymentService
      * @return array
      */
 
-    protected function chargeCard(array $params)
+    protected function chargeCard($params)
     {
         $encrytionKey = config('service.flutterwave.encryption_key');
         $secretKey = config('service.flutterwave.secret');
@@ -118,19 +142,23 @@ class PaymentService
      * @return array
      */
 
-    protected function validateOpt(array $result)
+    public function validateOtp($payload)
     {
-        $transactionId = $result['data']['id'];
-        $flwRef = $result['data']['flw_ref'];
-        $otp = '12345';
+
+        $flwRef = $payload['flw_ref'];
+        $otp = $payload['otp'];
+
         $secretKey = config('service.flutterwave.secret');
         $data = ['otp' => $otp, 'flw_ref' => $flwRef];
         $validateUrl = 'https://api.flutterwave.com/v3/validate-charge';
         $response = Http::withToken($secretKey)->post($validateUrl, $data);
         $response = $response->json();
 
-        $status = $response['data']['status'];
-        if ($status === 'successful' || $status === 'pending') {
+        if ($response['status'] == 'error') {
+            return $response;
+        }
+
+        if ($response['data']['status'] === 'successful' || $response['data']['status'] === 'pending') {
 
             $status = $response['data']['status'];
             $transactionId = $response['data']['id'];
@@ -147,20 +175,24 @@ class PaymentService
      * Verify the payment
      * @return array
      */
-    protected function verifyPayment(int $transactionId, string $paymentStatus)
+    protected function verifyPayment($transactionId, $paymentStatus)
     {
+
         $verifyUrl = 'https://api.flutterwave.com/v3/transactions/' . $transactionId . '/verify';
         $secretKey = config('service.flutterwave.secret');
 
         $response = Http::withToken($secretKey)->get($verifyUrl);
+
         $response = $response->json();
 
-        $payment = Payment::where('transaction_id', $transactionId)->first();
+        $payment = Payment::where('reference', $response['data']['tx_ref'])->first();
+        if ($payment) {
 
-        $payment->update([
-            'status' => $paymentStatus,
-            'paid_at' => now()
-        ]);
+            $payment->update([
+                'status' => $paymentStatus,
+                'paid_at' => now()
+            ]);
+        }
 
         return $response;
     }

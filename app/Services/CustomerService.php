@@ -26,7 +26,7 @@ class CustomerService
      * @return Customer|mixed
      */
 
-    public function store(array $data)
+    public function store($data)
     {
         try {
 
@@ -47,7 +47,7 @@ class CustomerService
      * @param int $id
      * @return mixed
      */
-    public function find(int $id)
+    public function find($id)
     {
         $customer = Customer::find($id);
         if (is_null($customer)) {
@@ -61,7 +61,7 @@ class CustomerService
      * @param int $customId
      * @return mixed
      */
-    public function payment(int $customerId)
+    public function payment($customerId)
     {
         $customer = Customer::find($customerId);
 

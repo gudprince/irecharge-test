@@ -30,6 +30,8 @@ Route::controller(CustomerController::class)->group(function () {
 
 Route::controller(FlutterwavePaymentController::class)->group(function () {
     Route::post('/v1/charge-card', 'pay');
+    Route::post('/v1/authorize-payment', 'authorizePayment');
+    Route::post('/v1/validate-otp', 'validateOtp');
     Route::get('/v1/handle-callback', 'handleCallback');
 });
 
